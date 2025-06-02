@@ -1,5 +1,5 @@
 import styles from "./App.module.css";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import SearchBar from "../SearchBar/SearchBar";
 import { fetchMovies } from "../../services/movieService";
@@ -15,33 +15,47 @@ export default function App() {
   const [query, setQuery] = useState<string>("");
   const [page, setPage] = useState<number>(1);
   const [selectedMovie, setSelectedMovie] = useState<null | Movie>(null);
-  const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
+  const lastNoResultsQuery = useRef<string | null>(null);
 
-  const { data, isFetching, error, isSuccess } = useQuery<FetchMoviesResponse>({
+  const { data, isFetching, error, isSuccess } = useQuery<FetchMoviesResponse, Error>({
     queryKey: ["cached_movies", query, page],
     queryFn: () => fetchMovies({ query, page }),
     placeholderData: keepPreviousData,
-    enabled: !!query.trim(),
   });
 
   const movies = (data as FetchMoviesResponse | undefined)?.results || [];
   const totalPages = (data as FetchMoviesResponse | undefined)?.total_pages || 0;
 
   useEffect(() => {
-    if (isSuccess && hasSubmitted && query && movies.length === 0) {
-      toast.error("No movies found for your request.");
+    if (query.trim() && !isFetching && isSuccess && movies.length === 0) {
+      if (lastNoResultsQuery.current !== query) {
+        toast.error("No movies found for your request.");
+        lastNoResultsQuery.current = query;
+      }
+    } else if (query.trim() && isSuccess && movies.length > 0) {
+      if (lastNoResultsQuery.current === query) {
+        lastNoResultsQuery.current = null;
+      }
     }
-  }, [isSuccess, hasSubmitted, query, movies.length]);
 
-  if (error) {
-    toast.error(error instanceof Error ? error.message : "An unknown error occurred");
-  }
+    if (!isFetching && lastNoResultsQuery.current && lastNoResultsQuery.current !== query) {
+      lastNoResultsQuery.current = null;
+    }
+  }, [isSuccess, isFetching, query, movies.length]);
 
   const updateQuery = (newQuery: string) => {
-    if (!newQuery.trim()) return;
+    if (!newQuery.trim()) {
+      setQuery("");
+      setPage(1);
+      lastNoResultsQuery.current = null;
+      return;
+    }
+
+    if (newQuery.trim() !== query) {
+      lastNoResultsQuery.current = null;
+    }
     setQuery(newQuery);
     setPage(1);
-    setHasSubmitted(true);
   };
 
   const handleMovieSelect = (movie: Movie) => setSelectedMovie(movie);
@@ -50,7 +64,7 @@ export default function App() {
   return (
     <div className={styles.app}>
       <SearchBar onSubmit={updateQuery} />
-      {isSuccess && totalPages > 1 && (
+      {totalPages > 1 && !isFetching && !error && (
         <ReactPaginate
           pageCount={totalPages}
           pageRangeDisplayed={5}
@@ -63,8 +77,7 @@ export default function App() {
           previousLabel="←"
         />
       )}
-      {isFetching && query && <Loader />}
-      {error && <ErrorMessage />}
+      {isFetching && query && <Loader />} {error && <ErrorMessage />}
       {data && movies.length > 0 && <MovieGrid movies={movies} onSelect={handleMovieSelect} />}
       {selectedMovie && <MovieModal movie={selectedMovie} onClose={handleCloseModal} />}
       <Toaster
