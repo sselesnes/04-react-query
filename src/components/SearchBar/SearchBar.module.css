@@ -35,11 +35,12 @@
 }
 
 .input {
-  padding: 10px 12px;
+  padding: 2px 12px 4px;
   font-size: 16px;
   border: 1px solid #ccc;
   border-radius: 4px;
   width: 240px;
+  line-height: 0;
 }
 
 .button {

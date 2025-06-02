@@ -56,9 +56,13 @@ export default function MovieModal({ movie, onClose }: MovieModalProps) {
           <p>
             <strong>Release Date:</strong> {movie.release_date || "Unknown"}
           </p>
-          {typeof movie.vote_average === "number" && (
+          {typeof movie.vote_average === "number" && movie.vote_average > 0 ? (
             <p>
               <strong>Rating:</strong> {movie.vote_average}/10
+            </p>
+          ) : (
+            <p>
+              <strong>Rating: N/A</strong>
             </p>
           )}
         </div>
