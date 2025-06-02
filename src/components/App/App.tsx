@@ -1,5 +1,5 @@
 import styles from "./App.module.css";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import SearchBar from "../SearchBar/SearchBar";
 import { fetchMovies } from "../../services/movieService";
@@ -15,12 +15,23 @@ export default function App() {
   const [query, setQuery] = useState<string>("");
   const [page, setPage] = useState<number>(1);
   const [selectedMovie, setSelectedMovie] = useState<null | Movie>(null);
+  const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
 
-  const { data, isLoading, error, isSuccess } = useQuery<FetchMoviesResponse>({
+  const { data, isFetching, error, isSuccess } = useQuery<FetchMoviesResponse>({
     queryKey: ["cached_movies", query, page],
     queryFn: () => fetchMovies({ query, page }),
     placeholderData: keepPreviousData,
+    enabled: !!query.trim(),
   });
+
+  const movies = (data as FetchMoviesResponse | undefined)?.results || [];
+  const totalPages = (data as FetchMoviesResponse | undefined)?.total_pages || 0;
+
+  useEffect(() => {
+    if (isSuccess && hasSubmitted && query && movies.length === 0) {
+      toast.error("No movies found for your request.");
+    }
+  }, [isSuccess, hasSubmitted, query, movies.length]);
 
   if (error) {
     toast.error(error instanceof Error ? error.message : "An unknown error occurred");
@@ -30,13 +41,11 @@ export default function App() {
     if (!newQuery.trim()) return;
     setQuery(newQuery);
     setPage(1);
+    setHasSubmitted(true);
   };
 
   const handleMovieSelect = (movie: Movie) => setSelectedMovie(movie);
   const handleCloseModal = () => setSelectedMovie(null);
-
-  const movies = (data as FetchMoviesResponse | undefined)?.results || [];
-  const totalPages = (data as FetchMoviesResponse | undefined)?.total_pages || 0;
 
   return (
     <div className={styles.app}>
@@ -54,7 +63,7 @@ export default function App() {
           previousLabel="←"
         />
       )}
-      {isLoading && <Loader />}
+      {isFetching && query && <Loader />}
       {error && <ErrorMessage />}
       {data && movies.length > 0 && <MovieGrid movies={movies} onSelect={handleMovieSelect} />}
       {selectedMovie && <MovieModal movie={selectedMovie} onClose={handleCloseModal} />}
