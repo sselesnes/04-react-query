@@ -15,12 +15,13 @@ export default function App() {
   const [query, setQuery] = useState<string>("");
   const [page, setPage] = useState<number>(1);
   const [selectedMovie, setSelectedMovie] = useState<null | Movie>(null);
-  const lastNoResultsQuery = useRef<string | null>(null);
+  const lastNoResultsQuery = useRef<string | null>(null); // для toast error
 
   const { data, isFetching, error, isSuccess } = useQuery<FetchMoviesResponse, Error>({
     queryKey: ["cached_movies", query, page],
     queryFn: () => fetchMovies({ query, page }),
     placeholderData: keepPreviousData,
+    enabled: !!query,
   });
 
   const movies = (data as FetchMoviesResponse | undefined)?.results || [];
