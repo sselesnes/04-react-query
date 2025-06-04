@@ -1,15 +1,32 @@
 import styles from "./SearchBar.module.css";
 import toast from "react-hot-toast";
+import { useState, useEffect } from "react";
+import { useDebounce } from "use-debounce";
 import type { SearchBarProps } from "../../types/movie";
 
 export default function SearchBar({ onSubmit }: SearchBarProps) {
+  const [query, setQuery] = useState<string>("");
+  const [debouncedQuery] = useDebounce(query, 500); // Затримка, мс
+
+  // Виклик onSubmit при зміні debouncedQuery
+  useEffect(() => {
+    if (debouncedQuery.trim()) {
+      onSubmit(debouncedQuery);
+    }
+  }, [debouncedQuery, onSubmit]);
+
   const handleSubmit = (formData: FormData) => {
-    const query = formData.get("query") as string;
-    if (!query) {
-      toast.error(`Please enter your search query.`);
+    const inputQuery = formData.get("query") as string;
+    if (!inputQuery.trim()) {
+      toast.error("Будь ласка, введіть пошуковий запит.");
       return;
     }
-    onSubmit(query);
+    onSubmit(inputQuery);
+    setQuery(""); // Очищення поля після відправки
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
   };
 
   return (
@@ -29,11 +46,13 @@ export default function SearchBar({ onSubmit }: SearchBarProps) {
             type="text"
             name="query"
             autoComplete="off"
-            placeholder="Search movies..."
+            placeholder="Пошук фільмів..."
             autoFocus
+            value={query}
+            onChange={handleInputChange}
           />
           <button className={styles.button} type="submit">
-            Search
+            Пошук
           </button>
         </form>
       </div>
