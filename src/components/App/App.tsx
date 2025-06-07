@@ -30,7 +30,7 @@ export default function App() {
   useEffect(() => {
     if (query.trim() && !isFetching && isSuccess && movies.length === 0) {
       if (lastNoResultsQuery.current !== query) {
-        toast.error("No movies found for your request.");
+        toast.error("По Вашому запиту нічого не знайдено.");
         lastNoResultsQuery.current = query;
       }
     } else if (query.trim() && isSuccess && movies.length > 0) {
